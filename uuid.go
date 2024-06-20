@@ -1,4 +1,4 @@
-package store
+package vpack
 
 import (
 	"bytes"
@@ -10,14 +10,18 @@ import (
 
 const UUID_SIZE = 16
 
+// UUID is a continous buffer of 16 bytes
 type UUID [UUID_SIZE]byte
 
+// GenerateUUID creates a UUID (a 16 byte buffer) and fills it with bytes from the
+// cryptographically secure random generator provided by the OS
 func GenerateUUID() UUID {
 	var id UUID
 	rand.Read(id[:])
 	return id
 }
 
+// SerializeUUID is the serializer/deserializer function for UUID
 func SerializeUUID(id *UUID, buf *Buffer) {
 	for i := range id {
 		bptr := &((*id)[i])
@@ -27,6 +31,7 @@ func SerializeUUID(id *UUID, buf *Buffer) {
 
 var rawUrlEnc = base64.RawURLEncoding
 
+// String returns a url-safe base64 representation of the UUID bytes.
 func (u UUID) String() string {
 	return rawUrlEnc.EncodeToString(u[:])
 }
@@ -45,13 +50,18 @@ func (u *UUID) FromString(suuid string) error {
 	return nil
 }
 
-// NOTE: this is important: the json marshaler should *not* be pointer based,
-// but the unmarshaler *must* be pointer based
+/*
+	NOTE: this is important: the json marshaler should *not* be pointer based,
+	but the unmarshaler *must* be pointer based
+*/
+
+// MarshalJSON implements the json marshalling interface for UUID
 func (u UUID) MarshalJSON() ([]byte, error) {
 	strValue := rawUrlEnc.EncodeToString(u[:])
 	return json.Marshal(strValue)
 }
 
+// UnmarshalJSON implements the json marshalling interface for UUID
 func (u *UUID) UnmarshalJSON(raw []byte) error {
 	if bytes.Equal(raw, []byte("null")) {
 		return nil // no error
