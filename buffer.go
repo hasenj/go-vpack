@@ -2,20 +2,13 @@ package vpack
 
 import "io"
 
-type Mode int
-
-const (
-	Serialize Mode = iota
-	Deserialize
-)
-
 // Buffer is a byte buffer used to serialize data into, or
 // deserialize data from, depending on the mode.
 type Buffer struct {
 	Data  []byte
 	Pos   int  // reading position; not used for writing
 	Error bool // TODO: something better than this to report errors with more info?
-	Mode  Mode
+	Writing bool
 }
 
 // NewReader prepares a Buffer for deserializing data from
@@ -23,7 +16,7 @@ type Buffer struct {
 func NewReader(data []byte) *Buffer {
 	return &Buffer{
 		Data: data,
-		Mode: Deserialize,
+		Writing: false,
 	}
 }
 
@@ -33,7 +26,7 @@ func NewReader(data []byte) *Buffer {
 func NewWriter() *Buffer {
 	return &Buffer{
 		Data: make([]byte, 0, 64),
-		Mode: Serialize,
+		Writing: true,
 	}
 }
 

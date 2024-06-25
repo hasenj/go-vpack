@@ -6,11 +6,11 @@ import "errors"
 
 var GenericError = errors.New("Deserialization error")
 
-// SerializeFn is a generic serialization function that can be used either to
+// PackFn is a generic serialization function that can be used either to
 // serialize or deserialize data, depending on the buffer's mode.
-type SerializeFn[T any] func(data *T, buffer *Buffer)
+type PackFn[T any] func(data *T, buffer *Buffer)
 
-func ToBytes[T any](obj *T, fn SerializeFn[T]) []byte {
+func ToBytes[T any](obj *T, fn PackFn[T]) []byte {
 	buf := NewWriter()
 	fn(obj, buf)
 	if buf.Error {
@@ -20,7 +20,7 @@ func ToBytes[T any](obj *T, fn SerializeFn[T]) []byte {
 	}
 }
 
-func FromBytes[T any](data []byte, fn SerializeFn[T]) *T {
+func FromBytes[T any](data []byte, fn PackFn[T]) *T {
 	var obj T
 	if FromBytesInto(data, &obj, fn) {
 		return &obj
@@ -29,7 +29,7 @@ func FromBytes[T any](data []byte, fn SerializeFn[T]) *T {
 	}
 }
 
-func FromBytesInto[T any](data []byte, obj *T, fn SerializeFn[T]) bool {
+func FromBytesInto[T any](data []byte, obj *T, fn PackFn[T]) bool {
 	buf := NewReader(data)
 	fn(obj, buf)
 	return !buf.Error

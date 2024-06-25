@@ -21,8 +21,8 @@ func GenerateUUID() UUID {
 	return id
 }
 
-// SerializeUUID is the serializer/deserializer function for UUID
-func SerializeUUID(id *UUID, buf *Buffer) {
+// PackUUID is the serializer/deserializer function for UUID
+func PackUUID(id *UUID, buf *Buffer) {
 	for i := range id {
 		bptr := &((*id)[i])
 		Byte(bptr, buf)

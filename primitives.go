@@ -10,10 +10,9 @@ var BigEndian = binary.BigEndian
 // FUInt64 implements fixed size serialization of uint64. It writes data in big
 // endian, making it suitable for int keys to bolt.
 func FUInt64(n *uint64, buf *Buffer) {
-	switch buf.Mode {
-	case Serialize:
+	if buf.Writing {
 		buf.Data = BigEndian.AppendUint64(buf.Data, *n)
-	case Deserialize:
+	} else {
 		slice := buf.ReadBytes(8)
 		*n = BigEndian.Uint64(slice)
 	}
@@ -22,10 +21,9 @@ func FUInt64(n *uint64, buf *Buffer) {
 // FUInt32 implements fixed size serialization of uint32. It writes data in big
 // endian, making it suitable for int keys to bolt.
 func FUInt32(n *uint32, buf *Buffer) {
-	switch buf.Mode {
-	case Serialize:
+	if buf.Writing {
 		buf.Data = BigEndian.AppendUint32(buf.Data, *n)
-	case Deserialize:
+	} else  {
 		slice := buf.ReadBytes(2)
 		*n = BigEndian.Uint32(slice)
 	}
@@ -34,10 +32,9 @@ func FUInt32(n *uint32, buf *Buffer) {
 // FUInt16 implements fixed size serialization of uint16. It writes data in big
 // endian, making it suitable for int keys to bolt.
 func FUInt16(n *uint16, buf *Buffer) {
-	switch buf.Mode {
-	case Serialize:
+	if buf.Writing {
 		buf.Data = BigEndian.AppendUint16(buf.Data, *n)
-	case Deserialize:
+	} else {
 		slice := buf.ReadBytes(2)
 		*n = BigEndian.Uint16(slice)
 	}
@@ -75,10 +72,9 @@ func Float64(n *float64, buf *Buffer) {
 
 // Byte implements serialization for a single byte
 func Byte(b *byte, buf *Buffer) {
-	switch buf.Mode {
-	case Serialize:
+	if buf.Writing {
 		buf.WriteBytes(*b)
-	case Deserialize:
+	} else {
 		*b = buf.ReadBytes(1)[0]
 	}
 }
@@ -96,10 +92,9 @@ func Bool(b *bool, buf *Buffer) {
 // VInt64 implements varint encoding for int64. Varint users fewer bytes for
 // small values.
 func VInt64(n *int64, buf *Buffer) {
-	switch buf.Mode {
-	case Serialize:
+	if buf.Writing {
 		buf.Data = binary.AppendVarint(buf.Data, *n)
-	case Deserialize:
+	} else {
 		var err error
 		*n, err = binary.ReadVarint(buf)
 		if err != nil {
@@ -111,10 +106,9 @@ func VInt64(n *int64, buf *Buffer) {
 // VUInt64 implements varint encoding for uin64. Varint users fewer bytes for
 // small values.
 func VUInt64(n *uint64, buf *Buffer) {
-	switch buf.Mode {
-	case Serialize:
+	if buf.Writing {
 		buf.Data = binary.AppendUvarint(buf.Data, *n)
-	case Deserialize:
+	} else {
 		var err error
 		*n, err = binary.ReadUvarint(buf)
 		if err != nil {

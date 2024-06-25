@@ -14,12 +14,11 @@ import (
 func String(s *string, buf *Buffer) {
 	var size = len(*s)
 	Int(&size, buf)
-	switch buf.Mode {
-	case Serialize:
+	if buf.Writing {
 		var pos = len(buf.Data)
 		buf.EnsureSpace(size)
 		copy(buf.Data[pos:pos+size], *s)
-	case Deserialize:
+	} else {
 		// ReadBytes generally returns a slice into the buffer, not a copy of the data
 		// But `string(...)` copies the data to a new buffer in memory, so we should be ok!
 		*s = string(buf.ReadBytes(size))
@@ -29,14 +28,13 @@ func String(s *string, buf *Buffer) {
 // StringZ implement serialization for a string using null-byte termination.
 // This allows is to be used in the key of a boltdb key
 func StringZ(s *string, buf *Buffer) {
-	switch buf.Mode {
-	case Serialize:
+	if buf.Writing {
 		var pos = len(buf.Data)
 		var size = len(*s)
 		buf.EnsureSpace(size)
 		copy(buf.Data[pos:pos+size], *s)
 		buf.WriteBytes(0)
-	case Deserialize:
+	} else {
 		var start = buf.Pos
 		var end = start
 		for end < len(buf.Data) && buf.Data[end] != 0 {
@@ -52,12 +50,11 @@ func StringZ(s *string, buf *Buffer) {
 func ByteSlice(s *[]byte, buf *Buffer) {
 	var size = len(*s)
 	Int(&size, buf)
-	switch buf.Mode {
-	case Serialize:
+	if buf.Writing {
 		var pos = len(buf.Data)
 		buf.EnsureSpace(size)
 		copy(buf.Data[pos:pos+size], *s)
-	case Deserialize:
+	} else {
 		// ReadBytes generally returns a slice into the buffer, not a copy of the data
 		// we need to copy it out
 		*s = make([]byte, size)
@@ -83,10 +80,10 @@ func ByteArray[N int](s *[N]byte, buf *Buffer) {
 // serialization function. It starts by reading/writing the length of the slice,
 // then uses the provided serialization function to serialize each individual
 // item in the slice.
-func Slice[T any](list *[]T, fn SerializeFn[T], buf *Buffer) {
+func Slice[T any](list *[]T, fn PackFn[T], buf *Buffer) {
 	var size = len(*list)
 	Int(&size, buf)
-	if buf.Mode == Deserialize {
+	if !buf.Writing {
 		*list = make([]T, size)
 	}
 	for index := range *list {
@@ -95,16 +92,15 @@ func Slice[T any](list *[]T, fn SerializeFn[T], buf *Buffer) {
 	}
 }
 
-func Map[K comparable, T any](m *map[K]T, keyFn SerializeFn[K], valFn SerializeFn[T], buf *Buffer) {
+func Map[K comparable, T any](m *map[K]T, keyFn PackFn[K], valFn PackFn[T], buf *Buffer) {
 	var size = len(*m)
 	Int(&size, buf)
-	switch buf.Mode {
-	case Serialize:
+	if buf.Writing {
 		for key, val := range *m {
 			keyFn(&key, buf)
 			valFn(&val, buf)
 		}
-	case Deserialize:
+	} else {
 		generic.InitMap(m)
 		for i := 0; i < size; i++ {
 			var key K
@@ -124,15 +120,14 @@ type Binary interface {
 // BinaryMarshal implements serialization for an object that implements the
 // BinaryMarshaler and BinaryUnmarshaler interfaces from the standard library.
 func BinaryMarshal(b Binary, buf *Buffer) {
-	switch buf.Mode {
-	case Serialize:
+	if buf.Writing {
 		var data, err = b.MarshalBinary()
 		if err != nil {
 			buf.Error = true
 			return
 		}
 		ByteSlice(&data, buf)
-	case Deserialize:
+	} else {
 		var data []byte
 		ByteSlice(&data, buf)
 		var err = b.UnmarshalBinary(data)
@@ -159,13 +154,13 @@ func Time(t *time.Time, buf *Buffer) {
 func UnixTime(t *time.Time, buf *Buffer) {
 	var seconds int64
 
-	if buf.Mode == Serialize {
+	if buf.Writing {
 		seconds = t.Unix()
 	}
 
 	VInt64(&seconds, buf)
 
-	if buf.Mode == Deserialize {
+	if !buf.Writing {
 		*t = time.Unix(seconds, 0)
 	}
 }
@@ -177,13 +172,13 @@ func UnixTime(t *time.Time, buf *Buffer) {
 func UnixTimeKey(t *time.Time, buf *Buffer) {
 	var seconds int64
 
-	if buf.Mode == Serialize {
+	if buf.Writing {
 		seconds = t.Unix()
 	}
 
 	FInt64(&seconds, buf)
 
-	if buf.Mode == Deserialize {
+	if !buf.Writing {
 		*t = time.Unix(seconds, 0)
 	}
 }
@@ -193,13 +188,13 @@ func UnixTimeKey(t *time.Time, buf *Buffer) {
 func UnixTimeMilli(t *time.Time, buf *Buffer) {
 	var ms int64
 
-	if buf.Mode == Serialize {
+	if buf.Writing {
 		ms = t.UnixMilli()
 	}
 
 	VInt64(&ms, buf)
 
-	if buf.Mode == Deserialize {
+	if !buf.Writing {
 		*t = time.UnixMilli(ms)
 	}
 }
@@ -209,19 +204,19 @@ func UnixTimeMilli(t *time.Time, buf *Buffer) {
 func UnixTimeMilliKey(t *time.Time, buf *Buffer) {
 	var ms int64
 
-	if buf.Mode == Serialize {
+	if buf.Writing {
 		ms = t.UnixMilli()
 	}
 
 	FInt64(&ms, buf)
 
-	if buf.Mode == Deserialize {
+	if !buf.Writing {
 		*t = time.UnixMilli(ms)
 	}
 }
 
 // Versioned is a helper for creating versioned object serializers
-func Versioned[T any](item *T, buf *Buffer, fns ...SerializeFn[T]) {
+func Versioned[T any](item *T, buf *Buffer, fns ...PackFn[T]) {
 	var version = len(fns)
 	Int(&version, buf)
 	if version <= len(fns) {
