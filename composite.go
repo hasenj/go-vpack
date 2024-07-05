@@ -214,14 +214,3 @@ func UnixTimeMilliKey(t *time.Time, buf *Buffer) {
 		*t = time.UnixMilli(ms)
 	}
 }
-
-// Versioned is a helper for creating versioned object serializers
-func Versioned[T any](item *T, buf *Buffer, fns ...PackFn[T]) {
-	var version = len(fns)
-	Int(&version, buf)
-	if version <= len(fns) {
-		fns[version-1](item, buf)
-	} else {
-		buf.Error = true
-	}
-}

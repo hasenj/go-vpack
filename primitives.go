@@ -23,7 +23,7 @@ func FUInt64(n *uint64, buf *Buffer) {
 func FUInt32(n *uint32, buf *Buffer) {
 	if buf.Writing {
 		buf.Data = BigEndian.AppendUint32(buf.Data, *n)
-	} else  {
+	} else {
 		slice := buf.ReadBytes(2)
 		*n = BigEndian.Uint32(slice)
 	}
@@ -149,4 +149,13 @@ func Rune(r *rune, buf *Buffer) {
 	var n64 = int64(*r)
 	VInt64(&n64, buf)
 	*r = rune(n64)
+}
+
+func Version(max int, buf *Buffer) int {
+	var v = max
+	Int(&v, buf)
+	if v > max {
+		buf.Error = true
+	}
+	return v
 }
