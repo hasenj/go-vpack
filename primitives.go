@@ -151,10 +151,10 @@ func Rune(r *rune, buf *Buffer) {
 	*r = rune(n64)
 }
 
-func Version(max int, buf *Buffer) int {
-	var v = max
+func Version(current int, buf *Buffer) int {
+	var v = current
 	Int(&v, buf)
-	if v > max {
+	if v > current {
 		buf.Error = true
 	}
 	return v
